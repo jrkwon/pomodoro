@@ -1,0 +1,52 @@
+# Pomodoro (Linux Desktop App)
+
+`pomodorotimer.online`의 직관적인 세션 전환/프리셋 구성과 `Pomotroid`의 다크 미니멀 원형 다이얼 감성을 결합한 Linux 네이티브(PyQt5) 뽀모도로 타이머입니다. 할 일(To-Do) 기능을 배제하고 타이머와 집중 리듬에만 집중할 수 있도록 설계되었습니다.
+
+## 주요 기능
+
+- **네이티브 Always on Top (항상 위 고정)**:
+  - 상단 타이틀바의 **핀(Pin) 아이콘** 또는 `ON TOP` 배지를 클릭하거나 `Ctrl + T` 단축키로 언제든 창을 최상단에 고정/해제할 수 있습니다.
+  - 일반 모드와 화면 공간을 적게 차지하는 **미니 모드(`Ctrl + M`)**를 모두 지원합니다.
+- **세션 빠른 전환 (`pomodorotimer.online` 스타일)**:
+  - 상단 탭(`Focus` / `Short Break` / `Long Break`)을 클릭해 원하는 세션으로 즉시 전환할 수 있습니다.
+- **인기 프리셋 기본 제공 + 분(Minute) 단위 개별 설정**:
+  - **기본 제공 프리셋**:
+    - **Classic**: `25 / 5 / 15분` (4 라운드) — 표준 뽀모도로
+    - **Deep Work**: `50 / 10 / 20분` (4 라운드) — 깊은 몰입 작업
+    - **Study 45**: `45 / 15 / 30분` (4 라운드) — 학습 및 강의 리듬
+    - **Quick Sprint**: `15 / 3 / 10분` (4 라운드) — 빠른 시작/단기 집중
+    - **52 / 17 Rule**: `52 / 17 / 25분` (3 라운드) — 생산성 집중 비율
+  - **분 단위 상세 설정 (`Custom Duration`)**:
+    - 설정 화면(`Ctrl + ,`)에서 Focus, Short Break, Long Break 시간(분 단위)과 Long Break 전 라운드 횟수를 `-` / `+` 버튼 또는 숫자 직접 입력으로 자유롭게 조정할 수 있습니다.
+- **알림음 & 데스크톱 알림 & 자동 시작**:
+  - 외부 오디오 파일 없이 자체 합성된 부드러운 화음 차임벨 사운드(집중 종료 / 휴식 종료 구분)를 재생하며, 음소거(`M`) 토글을 지원합니다.
+  - 세션 종료 시 Linux 데스크톱 시스템 알림(`notify-send`)을 표시합니다.
+  - 집중 종료 후 휴식 자동 시작(`Auto-start Breaks`), 휴식 종료 후 집중 자동 시작(`Auto-start Focus`) 옵션을 제공합니다.
+- **설정 자동 저장**:
+  - 모든 프리셋, 분 단위 커스텀 시간, 항상 위 상태, 알림 설정은 `~/.config/pomodoro-app/settings.json`에 자동 저장됩니다.
+
+## 실행 방법
+
+```bash
+python3 /home/jaerock/projects/pomodoro/pomodoro.py
+# 또는 직접 실행
+./pomodoro.py
+```
+
+### 애플리케이션 메뉴에 등록하려면 (선택 사항)
+```bash
+cp /home/jaerock/projects/pomodoro/pomotroid-timer.desktop ~/.local/share/applications/
+```
+
+## 단축키 안내
+
+| 단축키 | 동작 |
+| :--- | :--- |
+| `Space` | 타이머 시작 / 일시정지 |
+| `R` | 현재 세션 시간 초기화 (Reset) |
+| `S` | 다음 세션으로 건너뛰기 (Skip) |
+| `M` | 알림음 음소거 토글 (Mute) |
+| `Ctrl + T` | Always on Top (항상 위) 켜기 / 끄기 |
+| `Ctrl + M` | 컴팩트 미니 모드(Mini Mode) 전환 |
+| `Ctrl + ,` | 프리셋 및 분 단위 설정 열기 / 닫기 |
+| `Ctrl + Q` | 앱 종료 |

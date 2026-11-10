@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Pomodoro
+Comment=Minimalist Always-on-Top Pomodoro Timer for Linux
+Exec=/usr/bin/python3 /home/jaerock/projects/pomodoro/pomodoro.py
+Icon=alarm-symbolic
+Terminal=false
+Categories=Utility;Clock;GTK;Qt;
+StartupNotify=true
