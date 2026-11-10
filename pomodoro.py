@@ -19,6 +19,7 @@ Features:
 import json
 import math
 import os
+import random
 import struct
 import subprocess
 import sys
@@ -198,6 +199,73 @@ DEFAULT_SETTINGS = {
     "auto_start_work": False,
     "auto_start_break": False,
     "compact_mode": False,
+}
+
+BREAK_EXERCISES = {
+    "short_break": [
+        {
+            "title": "목·승모근 스트레칭",
+            "desc": "오른손으로 머리를 잡고 오른쪽으로 지그시 당겨 15초 유지 후 반대쪽도 반복하세요.",
+        },
+        {
+            "title": "손목·전완근 늘리기",
+            "desc": "팔을 앞으로 뻗고 손바닥이 정면을 향하게 한 뒤, 반대 손으로 손가락을 몸쪽으로 15초 당겨주세요.",
+        },
+        {
+            "title": "앉아서 상체 비틀기",
+            "desc": "의자 등받이를 양손으로 잡고 허리를 곧게 편 채 상체를 뒤로 천천히 회전해 15초 유지하세요.",
+        },
+        {
+            "title": "어깨 으쓱 & 크게 돌리기",
+            "desc": "어깨를 귀까지 으쓱 올렸다 툭 떨어뜨리고, 앞뒤로 크게 원을 그리며 10회 돌려주세요.",
+        },
+        {
+            "title": "눈 피로 풀기 (20-20-20)",
+            "desc": "모니터에서 눈을 떼고 6m 이상 먼 곳을 20초간 바라보며 눈을 천천히 10번 깜빡이세요.",
+        },
+        {
+            "title": "턱 당기기 (거북목 교정)",
+            "desc": "시선은 정면을 둔 채 턱을 목 쪽으로 수평하게 당겨 뒷목이 펴지는 느낌으로 10초 유지 × 3회.",
+        },
+        {
+            "title": "앉아서 날개뼈 모으기",
+            "desc": "양팔을 W자 모양으로 벌려 가슴을 활짝 펴고 등 뒤 날개뼈를 5초간 조였다 풀기를 5회 반복하세요.",
+        },
+        {
+            "title": "앉아서 발목 돌리기 & 펌핑",
+            "desc": "책상 아래에서 두 발을 살짝 들어 발목을 크게 돌리고 발끝을 당겼다 밀기를 15회 반복하세요.",
+        },
+    ],
+    "long_break": [
+        {
+            "title": "책상 짚고 등·가슴 펴기",
+            "desc": "책상 모서리를 양손으로 짚고 한 발 물러서서 상체를 숙여 어깨와 등을 시원하게 늘려주세요 (30초).",
+        },
+        {
+            "title": "의자 터치 스쿼트 12회",
+            "desc": "의자 앞에 서서 엉덩이가 의자 시트에 살짝 닿을 때까지만 앉았다 일어서는 동작을 12회 반복하세요.",
+        },
+        {
+            "title": "앉아서 둔근(엉덩이) 스트레칭",
+            "desc": "한쪽 발목을 반대쪽 무릎 위에 올리고 허리를 편 채 상체를 앞으로 천천히 숙여 20초씩 유지하세요.",
+        },
+        {
+            "title": "종아리 까치발 들기 20회",
+            "desc": "의자 등받이를 가볍게 잡고 뒤꿈치를 최대한 높이 들었다 내리며 하체 혈액순환을 깨워주세요.",
+        },
+        {
+            "title": "일어서서 허리 젖히기 & 기지개",
+            "desc": "자리에서 일어나 양손으로 골반 뒤를 받치고 상체를 뒤로 부드럽게 젖혀 굽은 허리를 펴주세요.",
+        },
+        {
+            "title": "책상 짚고 푸시업 10회",
+            "desc": "책상 끝을 어깨너비보다 넓게 짚고 몸을 일직선으로 유지한 채 가볍게 팔굽혀펴기 10회를 해보세요.",
+        },
+        {
+            "title": "일어서서 허벅지 뒤쪽 늘리기",
+            "desc": "한쪽 발뒤꿈치를 바닥에 두고 발끝을 당긴 채 엉덩이를 뒤로 빼며 다리 뒤쪽을 20초씩 늘려주세요.",
+        },
+    ],
 }
 
 
@@ -892,6 +960,111 @@ class MinuteSteppersWidget(QFrame):
             self.spin.blockSignals(False)
 
 
+class StretchTipCard(QFrame):
+    """Break exercise / stretching recommendation card for both normal and mini modes."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.compact_mode = False
+        self.accent_hex = THEME["short_break"]
+        self.current_exercise = None
+        self.setObjectName("StretchTipCard")
+
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(10, 7, 10, 8)
+        self.main_layout.setSpacing(3)
+
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
+        header.setSpacing(6)
+
+        self.lbl_title = QLabel("✦ 스트레칭 추천")
+        self.lbl_title.setWordWrap(True)
+        self.lbl_title.setStyleSheet(
+            f"color: {THEME['text_primary']}; font-size: 11px; font-weight: 700; border: none; background: transparent;"
+        )
+        header.addWidget(self.lbl_title, 1)
+
+        self.btn_next = QPushButton("↻")
+        self.btn_next.setCursor(Qt.PointingHandCursor)
+        self.btn_next.setFixedSize(20, 20)
+        self.btn_next.setToolTip("다른 스트레칭/운동 보기")
+        self.main_layout.addLayout(header)
+        header.addWidget(self.btn_next)
+
+        self.lbl_desc = QLabel("")
+        self.lbl_desc.setWordWrap(True)
+        self.lbl_desc.setStyleSheet(
+            f"color: {THEME['text_secondary']}; font-size: 11px; line-height: 1.3; border: none; background: transparent;"
+        )
+        self.main_layout.addWidget(self.lbl_desc)
+
+        self._apply_style()
+
+    def _apply_style(self):
+        radius = 8 if self.compact_mode else 10
+        self.setStyleSheet(
+            f"""
+            QFrame#StretchTipCard {{
+                background-color: {THEME['bg_card']};
+                border: 1px solid {self.accent_hex};
+                border-radius: {radius}px;
+            }}
+            """
+        )
+        btn_sz = 18 if self.compact_mode else 21
+        self.btn_next.setFixedSize(btn_sz, btn_sz)
+        self.btn_next.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {THEME['bg_outer']};
+                color: {self.accent_hex};
+                border: 1px solid {THEME['border']};
+                border-radius: {btn_sz // 2}px;
+                font-size: {11 if self.compact_mode else 12}px;
+                font-weight: bold;
+                padding: 0px;
+            }}
+            QPushButton:hover {{
+                background-color: {self.accent_hex};
+                color: #181C24;
+                border-color: {self.accent_hex};
+            }}
+            """
+        )
+
+    def set_exercise(self, exercise: dict, accent_hex: str):
+        self.current_exercise = exercise
+        self.accent_hex = accent_hex
+        if exercise:
+            self.lbl_title.setText(f"✦ {exercise['title']}")
+            self.lbl_desc.setText(exercise["desc"])
+            self.setToolTip(f"{exercise['title']}\n{exercise['desc']}")
+        self._apply_style()
+
+    def set_compact(self, compact: bool):
+        self.compact_mode = compact
+        if compact:
+            self.main_layout.setContentsMargins(7, 4, 6, 4)
+            self.main_layout.setSpacing(1)
+            self.lbl_title.setStyleSheet(
+                f"color: {THEME['text_primary']}; font-size: 10px; font-weight: 700; border: none; background: transparent;"
+            )
+            self.lbl_desc.setStyleSheet(
+                f"color: {THEME['text_secondary']}; font-size: 9px; border: none; background: transparent;"
+            )
+        else:
+            self.main_layout.setContentsMargins(10, 7, 10, 8)
+            self.main_layout.setSpacing(3)
+            self.lbl_title.setStyleSheet(
+                f"color: {THEME['text_primary']}; font-size: 12px; font-weight: 700; border: none; background: transparent;"
+            )
+            self.lbl_desc.setStyleSheet(
+                f"color: {THEME['text_secondary']}; font-size: 11px; border: none; background: transparent;"
+            )
+        self._apply_style()
+
+
 # ---------------------------------------------------------------------------
 # Main Pomodoro Window
 # ---------------------------------------------------------------------------
@@ -910,6 +1083,7 @@ class PomodoroWindow(QMainWindow):
         self.is_running = False
         self.total_seconds = int(self.settings["work_minutes"]) * 60
         self.remaining_seconds = self.total_seconds
+        self.current_exercise = None
 
         # Drag state for frameless window
         self._drag_pos = None
@@ -1042,11 +1216,10 @@ class PomodoroWindow(QMainWindow):
             self.controls_row.setSpacing(14)
 
             self.dial.set_compact(True)
+            self.stretch_card.set_compact(True)
             self.btn_play.set_compact(True)
             self.btn_reset.setFixedSize(28, 28)
             self.btn_skip.setFixedSize(28, 28)
-
-            self.setFixedSize(210, 236)
         else:
             self.title_label.show()
             self.mode_tabs_frame.show()
@@ -1066,11 +1239,22 @@ class PomodoroWindow(QMainWindow):
             self.controls_row.setSpacing(22)
 
             self.dial.set_compact(False)
+            self.stretch_card.set_compact(False)
             self.btn_play.set_compact(False)
             self.btn_reset.setFixedSize(38, 38)
             self.btn_skip.setFixedSize(38, 38)
 
-            self.setFixedSize(390, 500)
+        self._update_window_geometry()
+
+    def _update_window_geometry(self):
+        compact = bool(self.settings.get("compact_mode", False))
+        is_break = self.current_mode in ("short_break", "long_break")
+        if compact:
+            # Slightly taller in break mode so the stretch recommendation fits cleanly
+            self.setFixedSize(210, 300 if is_break else 236)
+        else:
+            self.dial.setMinimumSize(195 if is_break else 230, 195 if is_break else 230)
+            self.setFixedSize(390, 520 if is_break else 500)
 
     # -----------------------------------------------------------------------
     # UI Construction
@@ -1224,6 +1408,12 @@ class PomodoroWindow(QMainWindow):
         # Center Circular Progress Dial
         self.dial = CircularTimerDial()
         self.timer_page_layout.addWidget(self.dial, 1)
+
+        # Break Stretching / Exercise Recommendation Card (shown during Short/Long Break)
+        self.stretch_card = StretchTipCard()
+        self.stretch_card.btn_next.clicked.connect(lambda: self._pick_next_exercise(avoid_current=True))
+        self.stretch_card.hide()
+        self.timer_page_layout.addWidget(self.stretch_card)
 
         # Main Transport Controls Row: Reset | Play/Pause | Skip
         self.controls_row = QHBoxLayout()
@@ -1869,6 +2059,21 @@ class PomodoroWindow(QMainWindow):
         self.current_round = 1
         self.switch_mode("work", manual=True)
 
+    def _pick_next_exercise(self, mode: str = None, avoid_current: bool = True):
+        target_mode = mode or self.current_mode
+        pool = BREAK_EXERCISES.get(target_mode, BREAK_EXERCISES["short_break"])
+        if not pool:
+            return None
+        candidates = pool
+        if avoid_current and self.current_exercise in pool and len(pool) > 1:
+            candidates = [ex for ex in pool if ex != self.current_exercise]
+        self.current_exercise = random.choice(candidates)
+        if target_mode in ("short_break", "long_break"):
+            self.stretch_card.set_exercise(
+                self.current_exercise, SESSION_MODES[target_mode]["color"]
+            )
+        return self.current_exercise
+
     def switch_mode(self, mode: str, manual: bool = False):
         self.pause_timer()
         self.current_mode = mode
@@ -1880,6 +2085,18 @@ class PomodoroWindow(QMainWindow):
             f"background-color: {accent}; border-radius: 4px;"
         )
         self.btn_pin.set_active(bool(self.settings.get("always_on_top", True)), accent)
+        self.btn_compact.set_active(bool(self.settings.get("compact_mode", False)), accent)
+
+        if mode in ("short_break", "long_break"):
+            if self.current_exercise is None or manual:
+                self._pick_next_exercise(mode=mode, avoid_current=True)
+            else:
+                self.stretch_card.set_exercise(self.current_exercise, accent)
+            self.stretch_card.show()
+        else:
+            self.stretch_card.hide()
+
+        self._update_window_geometry()
         self._update_pin_badge()
         self._style_mode_tabs()
         self._style_preset_buttons()
@@ -1905,6 +2122,8 @@ class PomodoroWindow(QMainWindow):
                 next_mode = "long_break"
             else:
                 next_mode = "short_break"
+            # Pick a fresh break exercise before alerts and mode switch
+            self._pick_next_exercise(mode=next_mode, avoid_current=True)
         else:
             # Finishing a break moves to work
             if prev_mode == "long_break":
@@ -1942,6 +2161,8 @@ class PomodoroWindow(QMainWindow):
                 )
                 title = "Focus Session Complete!"
                 body = f"Time for a {brk_min}-minute {SESSION_MODES[next_mode]['short_label'].lower()}."
+                if self.current_exercise:
+                    body += f"\n✦ {self.current_exercise['title']}: {self.current_exercise['desc']}"
             else:
                 title = "Break Finished!"
                 body = f"Ready for Focus Round {self.current_round}/{self.total_rounds} ({self.settings['work_minutes']} min)."
