@@ -2228,6 +2228,37 @@ class PomodoroWindow(QMainWindow):
         super().mouseReleaseEvent(event)
 
 
+def create_app_icon() -> QIcon:
+    """Loads theme alarm icon with a crisp custom-rendered vector fallback for Dock/Taskbar."""
+    icon = QIcon.fromTheme("alarm-symbolic")
+    if not icon.isNull():
+        return icon
+
+    icon = QIcon()
+    for sz in (16, 24, 32, 48, 64, 128):
+        pix = QPixmap(sz, sz)
+        pix.fill(Qt.transparent)
+        p = QPainter(pix)
+        p.setRenderHint(QPainter.Antialiasing)
+        s = sz / 64.0
+        # Rounded dark badge background
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(THEME["bg_main"]))
+        p.drawRoundedRect(QRectF(4 * s, 4 * s, 56 * s, 56 * s), 14 * s, 14 * s)
+        # Coral progress ring
+        pen = QPen(QColor(THEME["work"]), 5.5 * s, Qt.SolidLine, Qt.RoundCap)
+        p.setPen(pen)
+        p.setBrush(Qt.NoBrush)
+        p.drawEllipse(QRectF(14 * s, 14 * s, 36 * s, 36 * s))
+        # Clock hands
+        p.setPen(QPen(QColor(THEME["text_primary"]), 4.0 * s, Qt.SolidLine, Qt.RoundCap))
+        p.drawLine(QPointF(32 * s, 32 * s), QPointF(32 * s, 21 * s))
+        p.drawLine(QPointF(32 * s, 32 * s), QPointF(40 * s, 32 * s))
+        p.end()
+        icon.addPixmap(pix)
+    return icon
+
+
 def main():
     # Enable High-DPI scaling
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -2235,6 +2266,9 @@ def main():
 
     app = QApplication(sys.argv)
     app.setApplicationName("Pomodoro")
+    app.setDesktopFileName("pomotroid-timer")
+    app_icon = create_app_icon()
+    app.setWindowIcon(app_icon)
     app.setStyleSheet(
         f"""
         QToolTip {{
@@ -2249,6 +2283,7 @@ def main():
     )
 
     window = PomodoroWindow()
+    window.setWindowIcon(app_icon)
     window.show()
     sys.exit(app.exec_())
 
