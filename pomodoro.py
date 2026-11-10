@@ -981,7 +981,7 @@ class StretchTipCard(QFrame):
         self.lbl_title = QLabel("✦ 스트레칭 추천")
         self.lbl_title.setWordWrap(True)
         self.lbl_title.setStyleSheet(
-            f"color: {THEME['text_primary']}; font-size: 11px; font-weight: 700; border: none; background: transparent;"
+            f"color: {self.accent_hex}; font-size: 11px; font-weight: 700; border: none; background: transparent;"
         )
         header.addWidget(self.lbl_title, 1)
 
@@ -995,7 +995,7 @@ class StretchTipCard(QFrame):
         self.lbl_desc = QLabel("")
         self.lbl_desc.setWordWrap(True)
         self.lbl_desc.setStyleSheet(
-            f"color: {THEME['text_secondary']}; font-size: 11px; line-height: 1.3; border: none; background: transparent;"
+            f"color: {THEME['text_primary']}; font-size: 11px; line-height: 1.3; border: none; background: transparent;"
         )
         self.main_layout.addWidget(self.lbl_desc)
 
@@ -1012,6 +1012,15 @@ class StretchTipCard(QFrame):
             }}
             """
         )
+        title_px = 10 if self.compact_mode else 12
+        desc_px = 9 if self.compact_mode else 11
+        self.lbl_title.setStyleSheet(
+            f"color: {self.accent_hex}; font-size: {title_px}px; font-weight: 700; border: none; background: transparent;"
+        )
+        self.lbl_desc.setStyleSheet(
+            f"color: {THEME['text_primary']}; font-size: {desc_px}px; font-weight: 500; border: none; background: transparent;"
+        )
+
         btn_sz = 18 if self.compact_mode else 21
         self.btn_next.setFixedSize(btn_sz, btn_sz)
         self.btn_next.setStyleSheet(
@@ -1047,21 +1056,9 @@ class StretchTipCard(QFrame):
         if compact:
             self.main_layout.setContentsMargins(7, 4, 6, 4)
             self.main_layout.setSpacing(1)
-            self.lbl_title.setStyleSheet(
-                f"color: {THEME['text_primary']}; font-size: 10px; font-weight: 700; border: none; background: transparent;"
-            )
-            self.lbl_desc.setStyleSheet(
-                f"color: {THEME['text_secondary']}; font-size: 9px; border: none; background: transparent;"
-            )
         else:
             self.main_layout.setContentsMargins(10, 7, 10, 8)
             self.main_layout.setSpacing(3)
-            self.lbl_title.setStyleSheet(
-                f"color: {THEME['text_primary']}; font-size: 12px; font-weight: 700; border: none; background: transparent;"
-            )
-            self.lbl_desc.setStyleSheet(
-                f"color: {THEME['text_secondary']}; font-size: 11px; border: none; background: transparent;"
-            )
         self._apply_style()
 
 
