@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "PyQt5>=5.15.10",
+# ]
+# ///
 """
-Pomodoro Timer Desktop Application for Linux (PyQt5)
+Pomodoro Timer Desktop Application (Linux / macOS / Windows, PyQt5)
 Inspired by Pomotroid & pomodorotimer.online
 
 Features:
 - Frameless modern dark UI with custom titlebar and rounded corners
-- Native Always on Top (Pin) toggle (works reliably on X11/Linux)
+- Native Always on Top (Pin) toggle (Linux X11, macOS, Windows)
 - Quick session mode tabs (Focus / Short Break / Long Break)
 - Smooth circular SVG-style progress ring with tabular countdown timer
-- Built-in popular presets (25/5/15 Classic, 50/10/20 Deep Work, 15/3/10 Sprint, 45/15/30 Study)
-- Separate minute-by-minute custom duration settings (Work, Short Break, Long Break, Rounds)
+- Built-in popular presets with customizable per-preset durations & rounds
+- Separate floating Break Stretch Guide window with animated vector illustrations
 - Auto-start Work / Auto-start Break options
 - Synthesized pleasant chime sounds (Focus End & Break End) with volume/mute control
-- Desktop notifications via notify-send / system tray fallback
+- Cross-platform desktop notifications (notify-send / osascript)
 - Persistent configuration in ~/.config/pomodoro-app/settings.json
 """
 
+import getpass
 import json
 import math
 import os
@@ -303,7 +310,8 @@ class SoundManager:
     """Synthesizes clean harmonic bell chimes and plays them asynchronously."""
 
     def __init__(self):
-        self.temp_dir = Path(tempfile.gettempdir()) / f"pomodoro_sounds_{os.getuid()}"
+        uid = os.getuid() if hasattr(os, "getuid") else getpass.getuser()
+        self.temp_dir = Path(tempfile.gettempdir()) / f"pomodoro_sounds_{uid}"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.work_end_wav = self.temp_dir / "work_end.wav"
         self.break_end_wav = self.temp_dir / "break_end.wav"
@@ -381,8 +389,35 @@ class SoundManager:
         if not wav_path.exists():
             self._ensure_wav_files()
 
-        # PulseAudio paplay supports --volume (0 to 65536)
-        pa_vol = int(max(0, min(100, volume_percent)) * 655.36)
+        clamped_vol = max(0, min(100, volume_percent))
+
+        if sys.platform == "win32":
+            try:
+                import winsound
+
+                winsound.PlaySound(
+                    str(wav_path), winsound.SND_FILENAME | winsound.SND_ASYNC
+                )
+                return
+            except Exception:
+                QApplication.beep()
+                return
+
+        if sys.platform == "darwin":
+            mac_vol = f"{clamped_vol / 100.0:.2f}"
+            try:
+                subprocess.Popen(
+                    ["afplay", "-v", mac_vol, str(wav_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return
+            except Exception:
+                QApplication.beep()
+                return
+
+        # Linux: PulseAudio paplay supports --volume (0 to 65536)
+        pa_vol = int(clamped_vol * 655.36)
         try:
             subprocess.Popen(
                 ["paplay", f"--volume={pa_vol}", str(wav_path)],
@@ -1664,6 +1699,8 @@ class PomodoroWindow(QMainWindow):
 
     def _enforce_x11_above(self):
         """Ensure X11 Window Manager respects Always-on-Top state immediately."""
+        if not sys.platform.startswith("linux"):
+            return
         keep_above = bool(self.settings.get("always_on_top", True))
         action = "add" if keep_above else "remove"
         for w in (self, getattr(self, "stretch_popup", None)):
@@ -2726,18 +2763,31 @@ class PomodoroWindow(QMainWindow):
                 body = f"Ready for Focus Round {self.current_round}/{self.total_rounds} ({self.settings['work_minutes']} min)."
 
             try:
-                subprocess.Popen(
-                    [
-                        "notify-send",
-                        "--app-name=Pomodoro",
-                        "-i",
-                        "alarm-symbolic",
-                        title,
-                        body,
-                    ],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+                if sys.platform == "darwin":
+                    esc_title = title.replace('"', '\\"')
+                    esc_body = body.replace('"', '\\"')
+                    subprocess.Popen(
+                        [
+                            "osascript",
+                            "-e",
+                            f'display notification "{esc_body}" with title "{esc_title}"',
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                elif sys.platform.startswith("linux"):
+                    subprocess.Popen(
+                        [
+                            "notify-send",
+                            "--app-name=Pomodoro",
+                            "-i",
+                            "alarm-symbolic",
+                            title,
+                            body,
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
             except Exception:
                 pass
 

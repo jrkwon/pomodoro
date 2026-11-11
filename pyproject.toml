@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pomodoro-timer"
+version = "0.1.0"
+description = "Minimalist Cross-Platform Desktop Pomodoro Timer with Break Stretching Guides (PyQt5)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "jrkwon" }
+]
+dependencies = [
+    "PyQt5>=5.15.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/jrkwon/pomodoro"
+Repository = "https://github.com/jrkwon/pomodoro"
+
+[project.scripts]
+pomodoro = "pomodoro:main"
+
+[project.gui-scripts]
+pomodoro-gui = "pomodoro:main"
+
+[tool.setuptools]
+py-modules = ["pomodoro"]

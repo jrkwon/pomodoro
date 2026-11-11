@@ -1,6 +1,6 @@
-# Pomodoro (Linux Desktop App)
+# Pomodoro (Cross-Platform Desktop App)
 
-`pomodorotimer.online`의 직관적인 세션 전환/프리셋 구성과 `Pomotroid`의 다크 미니멀 원형 다이얼 감성을 결합한 Linux 네이티브(PyQt5) 뽀모도로 타이머입니다. 할 일(To-Do) 기능을 배제하고 타이머와 집중 리듬에만 집중할 수 있도록 설계되었습니다.
+`pomodorotimer.online`의 직관적인 세션 전환/프리셋 구성과 `Pomotroid`의 다크 미니멀 원형 다이얼 감성을 결합한 크로스 플랫폼(Linux / macOS / Windows, PyQt5) 데스크톱 뽀모도로 타이머입니다. 할 일(To-Do) 기능을 배제하고 타이머와 집중 리듬에만 집중할 수 있도록 설계되었습니다.
 
 ## 주요 기능
 
@@ -25,23 +25,46 @@
   - **Long Break**: 자리에서 일어나 몸을 깨우는 동작 포함 (책상 짚고 등·가슴 펴기, 의자 터치 스쿼트, 둔근 스트레칭, 종아리 까치발 들기, 일어서서 허리 젖히기, 책상 푸시업 등)
   - 일반 모드와 **미니 모드(`Ctrl + M`)** 모두에서 타이머 창 옆에 자동으로 뜨며, 우측 상단의 `다른 동작 ↻` 버튼으로 언제든 다른 동작을 볼 수 있습니다.
 - **알림음 & 데스크톱 알림 & 자동 시작**:
-  - 외부 오디오 파일 없이 자체 합성된 부드러운 화음 차임벨 사운드(집중 종료 / 휴식 종료 구분)를 재생하며, 음소거(`M`) 토글을 지원합니다.
-  - 세션 종료 시 Linux 데스크톱 시스템 알림(`notify-send`)을 표시합니다.
+  - 외부 오디오 파일 없이 자체 합성된 부드러운 화음 차임벨 사운드(집중 종료 / 휴식 종료 구분)를 재생하며, 음소거(`M`) 토글을 지원합니다 (Linux `paplay`/`aplay`, macOS `afplay`, Windows `winsound` 자동 지원).
+  - 세션 종료 시 데스크톱 시스템 알림(Linux `notify-send`, macOS Notification Center `osascript`)을 표시합니다.
   - 집중 종료 후 휴식 자동 시작(`Auto-start Breaks`), 휴식 종료 후 집중 자동 시작(`Auto-start Focus`) 옵션을 제공합니다.
 - **설정 자동 저장**:
   - 모든 프리셋, 분 단위 커스텀 시간, 항상 위 상태, 알림 설정은 `~/.config/pomodoro-app/settings.json`에 자동 저장됩니다.
 
-## 실행 방법
+## 설치 및 실행 방법 (`uv` 권장 — Linux / macOS / Windows 공통)
 
+시스템 Python이나 전역 패키지를 건드리지 않고 [uv](https://docs.astral.sh/uv/)를 사용해 어떤 OS에서든 독립된 가상환경으로 바로 설치·실행할 수 있습니다.
+
+### 1. 설치 없이 바로 실행 (`uvx`)
 ```bash
-python3 /home/jaerock/projects/pomodoro/pomodoro.py
-# 또는 직접 실행
-./pomodoro.py
+uvx --from git+https://github.com/jrkwon/pomodoro pomodoro
 ```
 
-### 애플리케이션 메뉴에 등록하려면 (선택 사항)
+### 2. 전역 CLI/앱 도구로 설치 (`uv tool install`)
 ```bash
-cp /home/jaerock/projects/pomodoro/pomotroid-timer.desktop ~/.local/share/applications/
+uv tool install git+https://github.com/jrkwon/pomodoro
+
+# 이후 어디서든 아래 명령으로 실행:
+pomodoro
+```
+
+### 3. 저장소 클론 후 실행 (`uv run`)
+```bash
+git clone https://github.com/jrkwon/pomodoro.git
+cd pomodoro
+uv run pomodoro
+# 또는 단일 스크립트 실행 (PEP 723 인라인 메타데이터 지원)
+uv run pomodoro.py
+```
+
+### 4. 시스템 Python으로 직접 실행
+```bash
+python3 pomodoro.py
+```
+
+### Linux 애플리케이션 메뉴 등록 (선택 사항)
+```bash
+cp pomotroid-timer.desktop ~/.local/share/applications/
 ```
 
 ## 단축키 안내
