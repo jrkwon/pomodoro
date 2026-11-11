@@ -132,7 +132,7 @@ PRESETS = [
         "work": 25,
         "short_break": 5,
         "long_break": 15,
-        "rounds": 4,
+        "rounds": 6,
     },
     {
         "id": "deep_work",
@@ -142,7 +142,7 @@ PRESETS = [
         "work": 50,
         "short_break": 10,
         "long_break": 20,
-        "rounds": 4,
+        "rounds": 6,
     },
     {
         "id": "study",
@@ -152,7 +152,7 @@ PRESETS = [
         "work": 45,
         "short_break": 15,
         "long_break": 30,
-        "rounds": 4,
+        "rounds": 6,
     },
     {
         "id": "sprint",
@@ -162,7 +162,7 @@ PRESETS = [
         "work": 15,
         "short_break": 3,
         "long_break": 10,
-        "rounds": 4,
+        "rounds": 8,
     },
     {
         "id": "ultralight",
@@ -172,7 +172,7 @@ PRESETS = [
         "work": 52,
         "short_break": 17,
         "long_break": 25,
-        "rounds": 3,
+        "rounds": 6,
     },
     {
         "id": "custom",
@@ -182,7 +182,7 @@ PRESETS = [
         "work": 90,
         "short_break": 30,
         "long_break": 30,
-        "rounds": 2,
+        "rounds": 4,
     },
 ]
 
@@ -201,7 +201,7 @@ DEFAULT_SETTINGS = {
     "work_minutes": 25,
     "short_break_minutes": 5,
     "long_break_minutes": 15,
-    "rounds": 4,
+    "rounds": 6,
     "preset_configs": DEFAULT_PRESET_CONFIGS,
     "always_on_top": True,
     "sound_enabled": True,
@@ -849,6 +849,13 @@ class CircularTimerDial(QWidget):
         painter.drawText(mode_rect, Qt.AlignCenter, self.mode_label)
 
 
+class NoWheelSpinBox(QSpinBox):
+    """QSpinBox that ignores mouse wheel events so scrolling the settings page never changes values."""
+
+    def wheelEvent(self, event):
+        event.ignore()
+
+
 class MinuteSteppersWidget(QFrame):
     """Clean custom minute stepper widget (- / value / +) for settings."""
 
@@ -929,7 +936,8 @@ class MinuteSteppersWidget(QFrame):
         self.btn_minus.setStyleSheet(btn_style)
         self.btn_minus.clicked.connect(lambda: self.step(-1))
 
-        self.spin = QSpinBox()
+        self.spin = NoWheelSpinBox()
+        self.spin.setFocusPolicy(Qt.ClickFocus)
         self.spin.setRange(min_val, max_val)
         self.spin.setValue(initial)
         self.spin.setSuffix(f" {unit}")
@@ -1149,7 +1157,7 @@ class StretchIllustrationWidget(QWidget):
             painter.setPen(QPen(self.accent_color, 2.0, Qt.SolidLine, Qt.RoundCap))
             painter.setBrush(Qt.NoBrush)
             painter.drawArc(QRectF(cx - 31, cy - 1, 16, 16), 30 * 16, 260 * 16)
-            painter.drawArc(QPointF(cx + 23, cy + 7).x() - 8, QPointF(cx + 23, cy + 7).y() - 8, 16, 16, 30 * 16, 260 * 16)
+            painter.drawArc(QRectF(cx + 15, cy - 1, 16, 16), 30 * 16, 260 * 16)
 
         elif ex == "eye_20_20_20":
             # Eye looking far toward distant mountains/target
