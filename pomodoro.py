@@ -177,14 +177,24 @@ PRESETS = [
     {
         "id": "custom",
         "name": "Custom",
-        "subtitle": "Minute setup",
+        "subtitle": "90 / 30 / 30m",
         "desc": "Your personalized minutes",
-        "work": None,
-        "short_break": None,
-        "long_break": None,
-        "rounds": None,
+        "work": 90,
+        "short_break": 30,
+        "long_break": 30,
+        "rounds": 2,
     },
 ]
+
+DEFAULT_PRESET_CONFIGS = {
+    p["id"]: {
+        "work_minutes": p["work"],
+        "short_break_minutes": p["short_break"],
+        "long_break_minutes": p["long_break"],
+        "rounds": p["rounds"],
+    }
+    for p in PRESETS
+}
 
 DEFAULT_SETTINGS = {
     "preset_id": "classic",
@@ -192,6 +202,7 @@ DEFAULT_SETTINGS = {
     "short_break_minutes": 5,
     "long_break_minutes": 15,
     "rounds": 4,
+    "preset_configs": DEFAULT_PRESET_CONFIGS,
     "always_on_top": True,
     "sound_enabled": True,
     "sound_volume": 80,
@@ -1110,13 +1121,42 @@ class PomodoroWindow(QMainWindow):
 
     def load_settings(self) -> dict:
         data = dict(DEFAULT_SETTINGS)
+        data["preset_configs"] = {
+            k: dict(v) for k, v in DEFAULT_PRESET_CONFIGS.items()
+        }
         try:
             if self.config_path.exists():
                 loaded = json.loads(self.config_path.read_text(encoding="utf-8"))
                 if isinstance(loaded, dict):
+                    loaded_configs = loaded.pop("preset_configs", None)
                     data.update(loaded)
+                    if isinstance(loaded_configs, dict):
+                        for pid, cfg in loaded_configs.items():
+                            if pid in data["preset_configs"] and isinstance(cfg, dict):
+                                data["preset_configs"][pid].update(cfg)
+                    else:
+                        # Migrate active preset's saved values into preset_configs
+                        active_pid = data.get("preset_id", "classic")
+                        if active_pid in data["preset_configs"]:
+                            data["preset_configs"][active_pid] = {
+                                "work_minutes": int(data.get("work_minutes", 25)),
+                                "short_break_minutes": int(data.get("short_break_minutes", 5)),
+                                "long_break_minutes": int(data.get("long_break_minutes", 15)),
+                                "rounds": int(data.get("rounds", 4)),
+                            }
         except Exception:
             pass
+
+        # Ensure top-level active durations match the active preset_id config
+        active_pid = data.get("preset_id", "classic")
+        if active_pid not in data["preset_configs"]:
+            active_pid = "classic"
+            data["preset_id"] = active_pid
+        active_cfg = data["preset_configs"][active_pid]
+        data["work_minutes"] = int(active_cfg["work_minutes"])
+        data["short_break_minutes"] = int(active_cfg["short_break_minutes"])
+        data["long_break_minutes"] = int(active_cfg["long_break_minutes"])
+        data["rounds"] = int(active_cfg["rounds"])
         return data
 
     def save_settings(self):
@@ -1575,11 +1615,38 @@ class PomodoroWindow(QMainWindow):
         layout.addLayout(preset_grid)
 
         # --- Section 2: Custom Minute Settings ---
-        sec2_lbl = QLabel("CUSTOM DURATION (MINUTES)")
+        sec2_header = QHBoxLayout()
+        sec2_header.setContentsMargins(0, 4, 0, 0)
+        sec2_lbl = QLabel("PRESET DURATION & ROUNDS")
         sec2_lbl.setStyleSheet(
-            f"color: {THEME['text_muted']}; font-size: 10px; font-weight: 700; letter-spacing: 1.4px; margin-top: 4px;"
+            f"color: {THEME['text_muted']}; font-size: 10px; font-weight: 700; letter-spacing: 1.4px;"
         )
-        layout.addWidget(sec2_lbl)
+        sec2_header.addWidget(sec2_lbl)
+        sec2_header.addStretch()
+
+        self.btn_reset_preset = QPushButton("Reset to Default")
+        self.btn_reset_preset.setCursor(Qt.PointingHandCursor)
+        self.btn_reset_preset.setToolTip("Restore the selected preset to its original default values")
+        self.btn_reset_preset.setStyleSheet(
+            f"""
+            QPushButton {{
+                color: {THEME['text_secondary']};
+                font-size: 10px;
+                font-weight: 600;
+                background: transparent;
+                border: 1px solid {THEME['border']};
+                border-radius: 5px;
+                padding: 2px 6px;
+            }}
+            QPushButton:hover {{
+                color: {THEME['text_primary']};
+                background-color: {THEME['bg_card_hover']};
+            }}
+            """
+        )
+        self.btn_reset_preset.clicked.connect(self.reset_active_preset_to_default)
+        sec2_header.addWidget(self.btn_reset_preset)
+        layout.addLayout(sec2_header)
 
         self.step_work = MinuteSteppersWidget(
             "Focus Session",
@@ -1874,7 +1941,18 @@ class PomodoroWindow(QMainWindow):
     def _style_preset_buttons(self):
         active_id = self.settings.get("preset_id", "classic")
         accent = SESSION_MODES[self.current_mode]["color"]
-        for pid, btn in self.preset_buttons.items():
+        configs = self.settings.get("preset_configs", DEFAULT_PRESET_CONFIGS)
+        for p in PRESETS:
+            pid = p["id"]
+            btn = self.preset_buttons.get(pid)
+            if not btn:
+                continue
+            cfg = configs.get(pid, DEFAULT_PRESET_CONFIGS[pid])
+            w = int(cfg["work_minutes"])
+            s = int(cfg["short_break_minutes"])
+            l = int(cfg["long_break_minutes"])
+            r = int(cfg["rounds"])
+            btn.setText(f"{p['name']}\n{w} / {s} / {l}m · {r}r")
             if pid == active_id:
                 btn.setStyleSheet(
                     f"""
@@ -1926,13 +2004,15 @@ class PomodoroWindow(QMainWindow):
 
     def select_preset(self, preset_id: str):
         self.settings["preset_id"] = preset_id
-        for p in PRESETS:
-            if p["id"] == preset_id and p["work"] is not None:
-                self.settings["work_minutes"] = p["work"]
-                self.settings["short_break_minutes"] = p["short_break"]
-                self.settings["long_break_minutes"] = p["long_break"]
-                self.settings["rounds"] = p["rounds"]
-                break
+        configs = self.settings.setdefault(
+            "preset_configs",
+            {k: dict(v) for k, v in DEFAULT_PRESET_CONFIGS.items()},
+        )
+        cfg = configs.get(preset_id, DEFAULT_PRESET_CONFIGS.get(preset_id, DEFAULT_PRESET_CONFIGS["classic"]))
+        self.settings["work_minutes"] = int(cfg["work_minutes"])
+        self.settings["short_break_minutes"] = int(cfg["short_break_minutes"])
+        self.settings["long_break_minutes"] = int(cfg["long_break_minutes"])
+        self.settings["rounds"] = int(cfg["rounds"])
 
         self.step_work.setValue(int(self.settings["work_minutes"]), block_signal=True)
         self.step_short.setValue(int(self.settings["short_break_minutes"]), block_signal=True)
@@ -1948,20 +2028,28 @@ class PomodoroWindow(QMainWindow):
         self._update_preset_badge()
         self._apply_duration_Change_to_active_timer()
 
+    def reset_active_preset_to_default(self):
+        active_id = self.settings.get("preset_id", "classic")
+        default_cfg = DEFAULT_PRESET_CONFIGS.get(active_id, DEFAULT_PRESET_CONFIGS["classic"])
+        configs = self.settings.setdefault(
+            "preset_configs",
+            {k: dict(v) for k, v in DEFAULT_PRESET_CONFIGS.items()},
+        )
+        configs[active_id] = dict(default_cfg)
+        self.select_preset(active_id)
+
     def _on_custom_duration_changed(self, key: str, value: int):
-        self.settings[key] = int(value)
-        # Check if current values match any built-in preset; otherwise set to 'custom'
-        matched = "custom"
-        for p in PRESETS:
-            if (
-                p["work"] == self.settings["work_minutes"]
-                and p["short_break"] == self.settings["short_break_minutes"]
-                and p["long_break"] == self.settings["long_break_minutes"]
-                and p["rounds"] == self.settings["rounds"]
-            ):
-                matched = p["id"]
-                break
-        self.settings["preset_id"] = matched
+        val = int(value)
+        self.settings[key] = val
+        active_id = self.settings.get("preset_id", "classic")
+        configs = self.settings.setdefault(
+            "preset_configs",
+            {k: dict(v) for k, v in DEFAULT_PRESET_CONFIGS.items()},
+        )
+        if active_id not in configs:
+            configs[active_id] = dict(DEFAULT_PRESET_CONFIGS.get(active_id, DEFAULT_PRESET_CONFIGS["classic"]))
+        configs[active_id][key] = val
+
         self.total_rounds = int(self.settings["rounds"])
         if self.current_round > self.total_rounds:
             self.current_round = self.total_rounds
