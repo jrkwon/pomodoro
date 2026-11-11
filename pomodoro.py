@@ -215,64 +215,79 @@ DEFAULT_SETTINGS = {
 BREAK_EXERCISES = {
     "short_break": [
         {
+            "id": "neck_tilt",
             "title": "목·승모근 스트레칭",
             "desc": "오른손으로 머리를 잡고 오른쪽으로 지그시 당겨 15초 유지 후 반대쪽도 반복하세요.",
         },
         {
+            "id": "wrist_stretch",
             "title": "손목·전완근 늘리기",
             "desc": "팔을 앞으로 뻗고 손바닥이 정면을 향하게 한 뒤, 반대 손으로 손가락을 몸쪽으로 15초 당겨주세요.",
         },
         {
+            "id": "seated_twist",
             "title": "앉아서 상체 비틀기",
             "desc": "의자 등받이를 양손으로 잡고 허리를 곧게 편 채 상체를 뒤로 천천히 회전해 15초 유지하세요.",
         },
         {
+            "id": "shoulder_roll",
             "title": "어깨 으쓱 & 크게 돌리기",
             "desc": "어깨를 귀까지 으쓱 올렸다 툭 떨어뜨리고, 앞뒤로 크게 원을 그리며 10회 돌려주세요.",
         },
         {
+            "id": "eye_20_20_20",
             "title": "눈 피로 풀기 (20-20-20)",
             "desc": "모니터에서 눈을 떼고 6m 이상 먼 곳을 20초간 바라보며 눈을 천천히 10번 깜빡이세요.",
         },
         {
+            "id": "chin_tuck",
             "title": "턱 당기기 (거북목 교정)",
             "desc": "시선은 정면을 둔 채 턱을 목 쪽으로 수평하게 당겨 뒷목이 펴지는 느낌으로 10초 유지 × 3회.",
         },
         {
+            "id": "scapula_squeeze",
             "title": "앉아서 날개뼈 모으기",
             "desc": "양팔을 W자 모양으로 벌려 가슴을 활짝 펴고 등 뒤 날개뼈를 5초간 조였다 풀기를 5회 반복하세요.",
         },
         {
+            "id": "ankle_pump",
             "title": "앉아서 발목 돌리기 & 펌핑",
             "desc": "책상 아래에서 두 발을 살짝 들어 발목을 크게 돌리고 발끝을 당겼다 밀기를 15회 반복하세요.",
         },
     ],
     "long_break": [
         {
+            "id": "desk_chest_open",
             "title": "책상 짚고 등·가슴 펴기",
             "desc": "책상 모서리를 양손으로 짚고 한 발 물러서서 상체를 숙여 어깨와 등을 시원하게 늘려주세요 (30초).",
         },
         {
+            "id": "chair_squat",
             "title": "의자 터치 스쿼트 12회",
             "desc": "의자 앞에 서서 엉덩이가 의자 시트에 살짝 닿을 때까지만 앉았다 일어서는 동작을 12회 반복하세요.",
         },
         {
+            "id": "seated_glute",
             "title": "앉아서 둔근(엉덩이) 스트레칭",
             "desc": "한쪽 발목을 반대쪽 무릎 위에 올리고 허리를 편 채 상체를 앞으로 천천히 숙여 20초씩 유지하세요.",
         },
         {
+            "id": "calf_raise",
             "title": "종아리 까치발 들기 20회",
             "desc": "의자 등받이를 가볍게 잡고 뒤꿈치를 최대한 높이 들었다 내리며 하체 혈액순환을 깨워주세요.",
         },
         {
+            "id": "standing_backbend",
             "title": "일어서서 허리 젖히기 & 기지개",
             "desc": "자리에서 일어나 양손으로 골반 뒤를 받치고 상체를 뒤로 부드럽게 젖혀 굽은 허리를 펴주세요.",
         },
         {
+            "id": "desk_pushup",
             "title": "책상 짚고 푸시업 10회",
             "desc": "책상 끝을 어깨너비보다 넓게 짚고 몸을 일직선으로 유지한 채 가볍게 팔굽혀펴기 10회를 해보세요.",
         },
         {
+            "id": "hamstring_stretch",
             "title": "일어서서 허벅지 뒤쪽 늘리기",
             "desc": "한쪽 발뒤꿈치를 바닥에 두고 발끝을 당긴 채 엉덩이를 뒤로 빼며 다리 뒤쪽을 20초씩 늘려주세요.",
         },
@@ -971,106 +986,552 @@ class MinuteSteppersWidget(QFrame):
             self.spin.blockSignals(False)
 
 
-class StretchTipCard(QFrame):
-    """Break exercise / stretching recommendation card for both normal and mini modes."""
+class StretchIllustrationWidget(QWidget):
+    """Custom vector illustration showing desk/chair stretching posture with motion cues."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.compact_mode = False
+        self.exercise_id = "neck_tilt"
+        self.accent_color = QColor(THEME["short_break"])
+        self._phase = 0.0
+        self.setFixedSize(108, 108)
+
+        self._anim_timer = QTimer(self)
+        self._anim_timer.setInterval(45)
+        self._anim_timer.timeout.connect(self._tick_anim)
+
+    def showEvent(self, event):
+        self._anim_timer.start()
+        super().showEvent(event)
+
+    def hideEvent(self, event):
+        self._anim_timer.stop()
+        super().hideEvent(event)
+
+    def _tick_anim(self):
+        self._phase = (self._phase + 0.12) % (2.0 * math.pi)
+        self.update()
+
+    def set_illustration(self, exercise_id: str, accent_hex: str):
+        self.exercise_id = exercise_id or "neck_tilt"
+        self.accent_color = QColor(accent_hex)
+        self.update()
+
+    def _draw_arrow(self, painter: QPainter, p1: QPointF, p2: QPointF, color: QColor, width: float = 2.0):
+        painter.save()
+        pen = QPen(color, width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.drawLine(p1, p2)
+        angle = math.atan2(p2.y() - p1.y(), p2.x() - p1.x())
+        head_len = 5.5
+        a1 = angle + math.radians(150)
+        a2 = angle - math.radians(150)
+        painter.drawLine(p2, QPointF(p2.x() + head_len * math.cos(a1), p2.y() + head_len * math.sin(a1)))
+        painter.drawLine(p2, QPointF(p2.x() + head_len * math.cos(a2), p2.y() + head_len * math.sin(a2)))
+        painter.restore()
+
+    def _draw_chair(self, painter: QPainter, x: float, y: float, scale: float = 1.0):
+        painter.save()
+        chair_pen = QPen(QColor("#5C677D"), 2.6 * scale, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        painter.setPen(chair_pen)
+        # Chair backrest & seat
+        painter.drawLine(QPointF(x - 14 * scale, y - 22 * scale), QPointF(x - 14 * scale, y + 6 * scale))
+        painter.drawLine(QPointF(x - 14 * scale, y + 6 * scale), QPointF(x + 12 * scale, y + 6 * scale))
+        # Chair leg/base
+        painter.drawLine(QPointF(x - 1 * scale, y + 6 * scale), QPointF(x - 1 * scale, y + 24 * scale))
+        painter.drawLine(QPointF(x - 10 * scale, y + 24 * scale), QPointF(x + 8 * scale, y + 24 * scale))
+        painter.restore()
+
+    def _draw_desk(self, painter: QPainter, x: float, y: float, scale: float = 1.0):
+        painter.save()
+        desk_pen = QPen(QColor("#5C677D"), 2.8 * scale, Qt.SolidLine, Qt.RoundCap)
+        painter.setPen(desk_pen)
+        painter.drawLine(QPointF(x - 16 * scale, y), QPointF(x + 18 * scale, y))
+        painter.drawLine(QPointF(x + 12 * scale, y), QPointF(x + 12 * scale, y + 28 * scale))
+        painter.restore()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        w, h = self.width(), self.height()
+        cx, cy = w / 2.0, h / 2.0
+        sway = math.sin(self._phase)  # -1.0 to 1.0 smooth oscillation
+
+        # Soft rounded card canvas with subtle radial glow
+        bg_rect = QRectF(2, 2, w - 4, h - 4)
+        painter.setPen(QPen(QColor(THEME["border"]), 1.0))
+        painter.setBrush(QColor(THEME["bg_outer"]))
+        painter.drawRoundedRect(bg_rect, 12, 12)
+
+        glow = QRadialGradient(QPointF(cx, cy), w * 0.45)
+        gc = QColor(self.accent_color)
+        gc.setAlpha(38)
+        gc0 = QColor(self.accent_color)
+        gc0.setAlpha(0)
+        glow.setColorAt(0.0, gc)
+        glow.setColorAt(1.0, gc0)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(glow)
+        painter.drawEllipse(QPointF(cx, cy), w * 0.44, h * 0.44)
+
+        body_pen = QPen(QColor(THEME["text_primary"]), 3.2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        accent_pen = QPen(self.accent_color, 2.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        prop_pen = QPen(QColor("#68758E"), 2.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+
+        ex = self.exercise_id
+
+        if ex == "neck_tilt":
+            # Front torso + head tilting side-to-side with hand gently pulling
+            painter.setPen(body_pen)
+            # Shoulders & torso
+            painter.drawLine(QPointF(cx - 22, cy + 16), QPointF(cx + 22, cy + 16))
+            painter.drawLine(QPointF(cx, cy + 16), QPointF(cx, cy + 36))
+            painter.drawLine(QPointF(cx - 22, cy + 16), QPointF(cx - 26, cy + 34))
+            # Neck + tilted head
+            tilt_x = 5.5 + 3.0 * sway
+            head_c = QPointF(cx + tilt_x, cy - 8)
+            painter.drawLine(QPointF(cx, cy + 15), head_c)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(head_c, 11, 11)
+            # Right arm reaching over head
+            painter.setPen(accent_pen)
+            painter.drawLine(QPointF(cx + 22, cy + 16), QPointF(cx + 30, cy - 6))
+            painter.drawLine(QPointF(cx + 30, cy - 6), QPointF(head_c.x() - 3, head_c.y() - 10))
+            # Stretch arc arrow
+            self._draw_arrow(painter, QPointF(cx - 12, cy - 24), QPointF(cx + 14, cy - 22), self.accent_color)
+
+        elif ex == "wrist_stretch":
+            # Extended arm + upright palm being pulled back by other hand
+            painter.setPen(body_pen)
+            # Forearm extending horizontally
+            painter.drawLine(QPointF(cx - 32, cy + 6), QPointF(cx + 6, cy + 6))
+            # Upright hand / fingers
+            palm_angle = -6.0 * sway
+            painter.save()
+            painter.translate(cx + 6, cy + 6)
+            painter.rotate(palm_angle)
+            painter.drawLine(QPointF(0, 0), QPointF(0, -22))
+            painter.drawLine(QPointF(0, 0), QPointF(5, -19))
+            painter.restore()
+            # Other hand pulling fingers back toward body
+            painter.setPen(accent_pen)
+            painter.drawLine(QPointF(cx - 18, cy - 18), QPointF(cx + 3, cy - 14))
+            self._draw_arrow(painter, QPointF(cx + 18, cy - 14), QPointF(cx - 8, cy - 14), self.accent_color)
+
+        elif ex == "seated_twist":
+            self._draw_chair(painter, cx - 2, cy + 14, 1.0)
+            painter.setPen(body_pen)
+            # Seated legs
+            painter.drawLine(QPointF(cx - 8, cy + 18), QPointF(cx + 12, cy + 18))
+            painter.drawLine(QPointF(cx + 12, cy + 18), QPointF(cx + 12, cy + 36))
+            # Torso + head
+            painter.drawLine(QPointF(cx - 8, cy + 18), QPointF(cx - 8, cy - 8))
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(cx - 8, cy - 19), 9, 9)
+            # Arms twisting to chair back
+            painter.setPen(accent_pen)
+            painter.drawLine(QPointF(cx - 8, cy - 2), QPointF(cx - 20, cy + 4))
+            # Curved rotation arrows around torso
+            arc_rect = QRectF(cx - 26, cy - 8, 36, 16)
+            painter.drawArc(arc_rect, -30 * 16, 210 * 16)
+            self._draw_arrow(painter, QPointF(cx + 6, cy + 4), QPointF(cx + 12, cy - 1), self.accent_color)
+
+        elif ex == "shoulder_roll":
+            painter.setPen(body_pen)
+            lift = -3.5 * abs(sway)
+            painter.drawEllipse(QPointF(cx, cy - 18), 10, 10)
+            painter.drawLine(QPointF(cx, cy - 8), QPointF(cx, cy + 30))
+            painter.drawLine(QPointF(cx - 22, cy + 8 + lift), QPointF(cx + 22, cy + 8 + lift))
+            painter.drawLine(QPointF(cx - 22, cy + 8 + lift), QPointF(cx - 24, cy + 28))
+            painter.drawLine(QPointF(cx + 22, cy + 8 + lift), QPointF(cx + 24, cy + 28))
+            # Circular roll arrows on both shoulders
+            painter.setPen(QPen(self.accent_color, 2.0, Qt.SolidLine, Qt.RoundCap))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawArc(QRectF(cx - 31, cy - 1, 16, 16), 30 * 16, 260 * 16)
+            painter.drawArc(QPointF(cx + 23, cy + 7).x() - 8, QPointF(cx + 23, cy + 7).y() - 8, 16, 16, 30 * 16, 260 * 16)
+
+        elif ex == "eye_20_20_20":
+            # Eye looking far toward distant mountains/target
+            painter.setPen(body_pen)
+            eye_cx, eye_cy = cx - 18, cy + 4
+            path = QPainterPath()
+            path.moveTo(eye_cx - 16, eye_cy)
+            path.quadTo(eye_cx, eye_cy - 13, eye_cx + 16, eye_cy)
+            path.quadTo(eye_cx, eye_cy + 13, eye_cx - 16, eye_cy)
+            painter.drawPath(path)
+            painter.setBrush(self.accent_color)
+            painter.drawEllipse(QPointF(eye_cx + 3, eye_cy - 1), 4.5, 4.5)
+            # Sight rays to distant tree/sparkle
+            painter.setPen(QPen(self.accent_color, 2.0, Qt.DashLine, Qt.RoundCap))
+            painter.drawLine(QPointF(eye_cx + 18, eye_cy - 3), QPointF(cx + 24, cy - 14))
+            painter.drawLine(QPointF(eye_cx + 18, eye_cy + 3), QPointF(cx + 24, cy + 12))
+            # Distant target icon (6m+)
+            painter.setPen(accent_pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawEllipse(QPointF(cx + 28, cy - 1), 9, 9)
+            painter.setBrush(self.accent_color)
+            painter.drawEllipse(QPointF(cx + 28, cy - 1), 3, 3)
+
+        elif ex == "chin_tuck":
+            # Side profile head sliding horizontally backward
+            shift = -3.5 * (0.5 + 0.5 * sway)
+            painter.setPen(QPen(QColor("#525C72"), 1.8, Qt.DashLine))
+            painter.drawLine(QPointF(cx + 8, cy - 28), QPointF(cx + 8, cy + 28))
+            painter.setPen(body_pen)
+            # Neck & shoulders side view
+            painter.drawLine(QPointF(cx - 4, cy + 32), QPointF(cx - 4 + shift * 0.5, cy + 6))
+            painter.setBrush(QColor(THEME["bg_main"]))
+            head_pt = QPointF(cx + 2 + shift, cy - 8)
+            painter.drawEllipse(head_pt, 12, 13)
+            # Nose profile
+            painter.drawLine(QPointF(head_pt.x() + 11, head_pt.y() - 2), QPointF(head_pt.x() + 16, head_pt.y() + 3))
+            painter.drawLine(QPointF(head_pt.x() + 16, head_pt.y() + 3), QPointF(head_pt.x() + 11, head_pt.y() + 5))
+            # Horizontal retraction arrow
+            self._draw_arrow(painter, QPointF(cx + 28, cy - 6), QPointF(cx + 14, cy - 6), self.accent_color)
+
+        elif ex == "scapula_squeeze":
+            # W-arm posture squeezing shoulder blades
+            painter.setPen(body_pen)
+            painter.drawEllipse(QPointF(cx, cy - 20), 9, 9)
+            painter.drawLine(QPointF(cx, cy - 11), QPointF(cx, cy + 28))
+            painter.drawLine(QPointF(cx - 16, cy - 4), QPointF(cx + 16, cy - 4))
+            # W-shaped arms
+            spread = 2.5 * sway
+            painter.setPen(accent_pen)
+            # Left W arm
+            painter.drawLine(QPointF(cx - 16, cy - 4), QPointF(cx - 24, cy + 12))
+            painter.drawLine(QPointF(cx - 24, cy + 12), QPointF(cx - 32 - spread, cy - 6))
+            # Right W arm
+            painter.drawLine(QPointF(cx + 16, cy - 4), QPointF(cx + 24, cy + 12))
+            painter.drawLine(QPointF(cx + 24, cy + 12), QPointF(cx + 32 + spread, cy - 6))
+            # Inward squeeze arrows on back
+            self._draw_arrow(painter, QPointF(cx - 18, cy + 22), QPointF(cx - 5, cy + 22), self.accent_color)
+            self._draw_arrow(painter, QPointF(cx + 18, cy + 22), QPointF(cx + 5, cy + 22), self.accent_color)
+
+        elif ex == "ankle_pump":
+            self._draw_chair(painter, cx - 14, cy + 10, 1.0)
+            painter.setPen(body_pen)
+            # Seated torso & extended lower leg
+            painter.drawEllipse(QPointF(cx - 16, cy - 20), 8, 8)
+            painter.drawLine(QPointF(cx - 16, cy - 12), QPointF(cx - 16, cy + 14))
+            painter.drawLine(QPointF(cx - 16, cy + 14), QPointF(cx + 4, cy + 14))
+            painter.drawLine(QPointF(cx + 4, cy + 14), QPointF(cx + 22, cy + 22))
+            # Pumping foot
+            foot_angle = 22.0 * sway
+            painter.save()
+            painter.translate(cx + 22, cy + 22)
+            painter.rotate(foot_angle)
+            painter.setPen(accent_pen)
+            painter.drawLine(QPointF(0, 0), QPointF(11, -6))
+            painter.restore()
+            self._draw_arrow(painter, QPointF(cx + 28, cy + 6), QPointF(cx + 28, cy + 28), self.accent_color)
+
+        elif ex == "desk_chest_open":
+            self._draw_desk(painter, cx + 22, cy + 6, 1.0)
+            painter.setPen(body_pen)
+            dip = 2.5 * sway
+            # Standing legs back, torso hinged forward with hands on desk
+            hip = QPointF(cx - 24, cy + 8)
+            shoulder = QPointF(cx - 2, cy - 4 + dip)
+            painter.drawLine(hip, QPointF(cx - 24, cy + 34))
+            painter.drawLine(hip, shoulder)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(shoulder.x() + 6, shoulder.y() - 6), 7.5, 7.5)
+            # Arms reaching onto desk
+            painter.setPen(accent_pen)
+            painter.drawLine(shoulder, QPointF(cx + 16, cy + 6))
+            self._draw_arrow(painter, QPointF(cx - 2, cy - 22), QPointF(cx - 2, cy - 10), self.accent_color)
+
+        elif ex == "chair_squat":
+            self._draw_chair(painter, cx - 18, cy + 14, 1.0)
+            drop = 4.0 * (0.5 + 0.5 * sway)
+            painter.setPen(body_pen)
+            hip = QPointF(cx - 4, cy + 12 + drop)
+            knee = QPointF(cx + 12, cy + 16 + drop * 0.5)
+            foot = QPointF(cx + 6, cy + 36)
+            shoulder = QPointF(cx + 2, cy - 10 + drop)
+            painter.drawLine(foot, knee)
+            painter.drawLine(knee, hip)
+            painter.drawLine(hip, shoulder)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(shoulder.x(), shoulder.y() - 10), 8, 8)
+            # Forward balance arms
+            painter.setPen(accent_pen)
+            painter.drawLine(shoulder, QPointF(shoulder.x() + 18, shoulder.y() + 2))
+            self._draw_arrow(painter, QPointF(cx + 28, cy + 16), QPointF(cx + 28, cy - 8), self.accent_color)
+
+        elif ex == "seated_glute":
+            self._draw_chair(painter, cx - 12, cy + 12, 1.0)
+            painter.setPen(body_pen)
+            lean = 4.0 * (0.5 + 0.5 * sway)
+            hip = QPointF(cx - 12, cy + 14)
+            shoulder = QPointF(cx - 10 + lean, cy - 10 + lean * 0.5)
+            painter.drawLine(hip, shoulder)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(shoulder.x() + 2, shoulder.y() - 9), 8, 8)
+            # Supporting leg + Figure-4 crossed leg (highlighted)
+            painter.drawLine(hip, QPointF(cx + 10, cy + 14))
+            painter.drawLine(QPointF(cx + 10, cy + 14), QPointF(cx + 10, cy + 36))
+            painter.setPen(accent_pen)
+            painter.drawLine(hip, QPointF(cx + 4, cy + 4))
+            painter.drawLine(QPointF(cx + 4, cy + 4), QPointF(cx + 10, cy + 14))
+            self._draw_arrow(painter, QPointF(cx + 8, cy - 18), QPointF(cx + 20, cy - 8), self.accent_color)
+
+        elif ex == "calf_raise":
+            # Chair backrest support + standing figure rising on tiptoes
+            painter.setPen(prop_pen)
+            painter.drawLine(QPointF(cx - 18, cy + 2), QPointF(cx - 18, cy + 36))
+            lift = -4.5 * (0.5 + 0.5 * sway)
+            painter.setPen(body_pen)
+            painter.drawEllipse(QPointF(cx + 4, cy - 22 + lift), 8, 8)
+            painter.drawLine(QPointF(cx + 4, cy - 14 + lift), QPointF(cx + 4, cy + 14 + lift))
+            painter.drawLine(QPointF(cx + 4, cy - 6 + lift), QPointF(cx - 18, cy + 4))
+            painter.drawLine(QPointF(cx + 4, cy + 14 + lift), QPointF(cx + 4, cy + 30 + lift))
+            # Tiptoe foot highlighted
+            painter.setPen(accent_pen)
+            painter.drawLine(QPointF(cx + 4, cy + 30 + lift), QPointF(cx + 12, cy + 36))
+            self._draw_arrow(painter, QPointF(cx + 22, cy + 24), QPointF(cx + 22, cy + 2), self.accent_color)
+
+        elif ex == "standing_backbend":
+            bend = 4.0 * (0.5 + 0.5 * sway)
+            painter.setPen(body_pen)
+            hip = QPointF(cx, cy + 12)
+            shoulder = QPointF(cx - 6 - bend, cy - 12)
+            painter.drawLine(hip, QPointF(cx, cy + 36))
+            painter.drawLine(hip, shoulder)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(shoulder.x() - 3, shoulder.y() - 9), 8, 8)
+            # Hands supporting lower back
+            painter.setPen(accent_pen)
+            painter.drawLine(shoulder, QPointF(cx - 10, cy + 2))
+            painter.drawLine(QPointF(cx - 10, cy + 2), QPointF(cx - 2, cy + 10))
+            self._draw_arrow(painter, QPointF(cx + 12, cy - 20), QPointF(cx - 14, cy - 22), self.accent_color)
+
+        elif ex == "desk_pushup":
+            self._draw_desk(painter, cx + 20, cy + 6, 1.0)
+            dip = 3.5 * (0.5 + 0.5 * sway)
+            painter.setPen(body_pen)
+            foot = QPointF(cx - 28, cy + 34)
+            shoulder = QPointF(cx - 2 + dip, cy - 6 + dip)
+            # Diagonal plank line
+            painter.drawLine(foot, shoulder)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(shoulder.x() + 5, shoulder.y() - 7), 8, 8)
+            # Pushing arms to desk edge
+            painter.setPen(accent_pen)
+            painter.drawLine(shoulder, QPointF(cx + 12, cy + 6))
+            self._draw_arrow(painter, QPointF(cx - 14, cy - 16), QPointF(cx - 4, cy - 6), self.accent_color)
+
+        else:  # hamstring_stretch
+            painter.setPen(body_pen)
+            hip = QPointF(cx - 10, cy + 10)
+            shoulder = QPointF(cx + 6, cy - 8)
+            painter.drawLine(hip, shoulder)
+            painter.setBrush(QColor(THEME["bg_main"]))
+            painter.drawEllipse(QPointF(shoulder.x() + 4, shoulder.y() - 8), 8, 8)
+            # Back bent knee leg
+            painter.drawLine(hip, QPointF(cx - 14, cy + 24))
+            painter.drawLine(QPointF(cx - 14, cy + 24), QPointF(cx - 14, cy + 36))
+            # Extended front hamstring leg with toes up
+            painter.setPen(accent_pen)
+            painter.drawLine(hip, QPointF(cx + 16, cy + 34))
+            painter.drawLine(QPointF(cx + 16, cy + 34), QPointF(cx + 23, cy + 27))
+            self._draw_arrow(painter, QPointF(cx + 22, cy + 18), QPointF(cx + 16, cy + 6), self.accent_color)
+
+
+class StretchPopupWindow(QWidget):
+    """Separate floating window with vector posture illustration for Break stretching."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._drag_pos = None
         self.accent_hex = THEME["short_break"]
-        self.current_exercise = None
-        self.setObjectName("StretchTipCard")
+        self.always_on_top = True
+        self.setWindowTitle("Break Stretch Guide")
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_AlwaysShowToolTips, True)
+        self._apply_flags(initial=True)
+        self._build_ui()
 
-        self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(10, 7, 10, 8)
-        self.main_layout.setSpacing(3)
+    def _apply_flags(self, initial: bool = False):
+        pos = self.pos() if not initial else None
+        flags = Qt.Tool | Qt.FramelessWindowHint
+        if self.always_on_top:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        if not initial and self.isVisible():
+            self.show()
+            if pos is not None:
+                self.move(pos)
 
+    def set_always_on_top(self, aot: bool):
+        if self.always_on_top != aot:
+            self.always_on_top = aot
+            was_visible = self.isVisible()
+            self._apply_flags(initial=False)
+            if was_visible:
+                self.show()
+
+    def _build_ui(self):
+        self.setFixedSize(360, 195)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(8, 8, 8, 8)
+
+        self.card = QFrame(self)
+        self.card.setObjectName("StretchPopupCard")
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(20)
+        shadow.setOffset(0, 5)
+        shadow.setColor(QColor(0, 0, 0, 145))
+        self.card.setGraphicsEffect(shadow)
+        outer.addWidget(self.card)
+
+        v_layout = QVBoxLayout(self.card)
+        v_layout.setContentsMargins(12, 9, 12, 11)
+        v_layout.setSpacing(7)
+
+        # Header bar
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(6)
 
+        self.badge_lbl = QLabel("BREAK STRETCH")
+        self.badge_lbl.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        header.addWidget(self.badge_lbl)
+        header.addStretch()
+
+        self.btn_next = QPushButton("다른 동작 ↻")
+        self.btn_next.setCursor(Qt.PointingHandCursor)
+        self.btn_next.setFixedHeight(22)
+        self.btn_next.setToolTip("다른 추천 스트레칭/운동 보기")
+        header.addWidget(self.btn_next)
+
+        self.btn_close = VectorIconButton("close", size=22, tooltip="스트레칭 창 닫기")
+        self.btn_close.clicked.connect(self.hide)
+        header.addWidget(self.btn_close)
+
+        v_layout.addLayout(header)
+
+        # Body: Left Illustration + Right Title & Description
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(12)
+
+        self.illustration = StretchIllustrationWidget(self.card)
+        body.addWidget(self.illustration)
+
+        text_col = QVBoxLayout()
+        text_col.setContentsMargins(0, 2, 0, 2)
+        text_col.setSpacing(5)
+
         self.lbl_title = QLabel("✦ 스트레칭 추천")
         self.lbl_title.setWordWrap(True)
-        self.lbl_title.setStyleSheet(
-            f"color: {self.accent_hex}; font-size: 11px; font-weight: 700; border: none; background: transparent;"
-        )
-        header.addWidget(self.lbl_title, 1)
-
-        self.btn_next = QPushButton("↻")
-        self.btn_next.setCursor(Qt.PointingHandCursor)
-        self.btn_next.setFixedSize(20, 20)
-        self.btn_next.setToolTip("다른 스트레칭/운동 보기")
-        self.main_layout.addLayout(header)
-        header.addWidget(self.btn_next)
+        text_col.addWidget(self.lbl_title)
 
         self.lbl_desc = QLabel("")
         self.lbl_desc.setWordWrap(True)
-        self.lbl_desc.setStyleSheet(
-            f"color: {THEME['text_primary']}; font-size: 11px; line-height: 1.3; border: none; background: transparent;"
-        )
-        self.main_layout.addWidget(self.lbl_desc)
+        self.lbl_desc.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        text_col.addWidget(self.lbl_desc, 1)
 
+        body.addLayout(text_col, 1)
+        v_layout.addLayout(body, 1)
         self._apply_style()
 
     def _apply_style(self):
-        radius = 8 if self.compact_mode else 10
-        self.setStyleSheet(
+        self.card.setStyleSheet(
             f"""
-            QFrame#StretchTipCard {{
-                background-color: {THEME['bg_card']};
-                border: 1px solid {self.accent_hex};
-                border-radius: {radius}px;
+            QFrame#StretchPopupCard {{
+                background-color: {THEME['bg_main']};
+                border: 1.5px solid {self.accent_hex};
+                border-radius: 14px;
             }}
             """
         )
-        title_px = 10 if self.compact_mode else 12
-        desc_px = 9 if self.compact_mode else 11
+        self.badge_lbl.setStyleSheet(
+            f"""
+            color: {self.accent_hex};
+            font-size: 10px;
+            font-weight: 700;
+            background-color: {THEME['bg_outer']};
+            border: 1px solid {THEME['border']};
+            border-radius: 5px;
+            padding: 2px 8px;
+            """
+        )
         self.lbl_title.setStyleSheet(
-            f"color: {self.accent_hex}; font-size: {title_px}px; font-weight: 700; border: none; background: transparent;"
+            f"color: {self.accent_hex}; font-size: 13px; font-weight: 700; border: none; background: transparent;"
         )
         self.lbl_desc.setStyleSheet(
-            f"color: {THEME['text_primary']}; font-size: {desc_px}px; font-weight: 500; border: none; background: transparent;"
+            f"color: {THEME['text_primary']}; font-size: 11px; font-weight: 500; border: none; background: transparent;"
         )
-
-        btn_sz = 18 if self.compact_mode else 21
-        self.btn_next.setFixedSize(btn_sz, btn_sz)
         self.btn_next.setStyleSheet(
             f"""
             QPushButton {{
-                background-color: {THEME['bg_outer']};
-                color: {self.accent_hex};
-                border: 1px solid {THEME['border']};
-                border-radius: {btn_sz // 2}px;
-                font-size: {11 if self.compact_mode else 12}px;
-                font-weight: bold;
-                padding: 0px;
+                background-color: {THEME['bg_card']};
+                color: {THEME['text_primary']};
+                border: 1px solid {self.accent_hex};
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 1px 8px;
             }}
             QPushButton:hover {{
                 background-color: {self.accent_hex};
                 color: #181C24;
-                border-color: {self.accent_hex};
             }}
             """
         )
 
-    def set_exercise(self, exercise: dict, accent_hex: str):
-        self.current_exercise = exercise
+    def set_exercise(self, exercise: dict, mode: str, accent_hex: str):
         self.accent_hex = accent_hex
+        mode_tag = "SHORT BREAK · 착석 스트레칭" if mode == "short_break" else "LONG BREAK · 전신 리프레시"
+        self.badge_lbl.setText(mode_tag)
         if exercise:
             self.lbl_title.setText(f"✦ {exercise['title']}")
             self.lbl_desc.setText(exercise["desc"])
-            self.setToolTip(f"{exercise['title']}\n{exercise['desc']}")
+            self.illustration.set_illustration(exercise.get("id", "neck_tilt"), accent_hex)
         self._apply_style()
 
-    def set_compact(self, compact: bool):
-        self.compact_mode = compact
-        if compact:
-            self.main_layout.setContentsMargins(7, 4, 6, 4)
-            self.main_layout.setSpacing(1)
+    def position_near(self, main_win: QWidget):
+        screen = QApplication.screenAt(main_win.frameGeometry().center())
+        if screen is None:
+            screen = QApplication.primaryScreen()
+        avail = screen.availableGeometry() if screen else QRectF(0, 0, 1920, 1080)
+
+        mw_geo = main_win.frameGeometry()
+        pw, ph = self.width(), self.height()
+
+        # Prefer placing to the right of main window, else left, else below, else above
+        if mw_geo.right() + 8 + pw <= avail.right():
+            x = mw_geo.right() + 8
+            y = mw_geo.top()
+        elif mw_geo.left() - 8 - pw >= avail.left():
+            x = mw_geo.left() - 8 - pw
+            y = mw_geo.top()
+        elif mw_geo.bottom() + 8 + ph <= avail.bottom():
+            x = max(int(avail.left()), min(mw_geo.left(), int(avail.right()) - pw))
+            y = mw_geo.bottom() + 8
         else:
-            self.main_layout.setContentsMargins(10, 7, 10, 8)
-            self.main_layout.setSpacing(3)
-        self._apply_style()
+            x = max(int(avail.left()), min(mw_geo.left(), int(avail.right()) - pw))
+            y = max(int(avail.top()), mw_geo.top() - 8 - ph)
+
+        y = max(int(avail.top()), min(int(y), int(avail.bottom()) - ph))
+        self.move(int(x), int(y))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_pos is not None and event.buttons() & Qt.LeftButton:
+            self.move(event.globalPos() - self._drag_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
 
 
 # ---------------------------------------------------------------------------
@@ -1103,6 +1564,10 @@ class PomodoroWindow(QMainWindow):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
 
         # Build UI
+        self.stretch_popup = StretchPopupWindow()
+        self.stretch_popup.btn_next.clicked.connect(
+            lambda: self._pick_next_exercise(avoid_current=True)
+        )
         self._build_ui()
         self._setup_shortcuts()
 
@@ -1191,19 +1656,19 @@ class PomodoroWindow(QMainWindow):
 
     def _enforce_x11_above(self):
         """Ensure X11 Window Manager respects Always-on-Top state immediately."""
-        if not self.isVisible():
-            return
-        win_id = int(self.winId())
         keep_above = bool(self.settings.get("always_on_top", True))
         action = "add" if keep_above else "remove"
-        try:
-            subprocess.Popen(
-                ["wmctrl", "-i", "-r", hex(win_id), "-b", f"{action},above"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except FileNotFoundError:
-            pass
+        for w in (self, getattr(self, "stretch_popup", None)):
+            if w is not None and w.isVisible():
+                win_id = int(w.winId())
+                try:
+                    subprocess.Popen(
+                        ["wmctrl", "-i", "-r", hex(win_id), "-b", f"{action},above"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                except FileNotFoundError:
+                    pass
 
     def toggle_always_on_top(self):
         new_state = not bool(self.settings.get("always_on_top", True))
@@ -1217,6 +1682,7 @@ class PomodoroWindow(QMainWindow):
             if new_state
             else "Always on Top: OFF (Click to pin on top)"
         )
+        self.stretch_popup.set_always_on_top(new_state)
         self._apply_window_flags(initial=False)
         self._update_pin_badge()
 
@@ -1253,7 +1719,6 @@ class PomodoroWindow(QMainWindow):
             self.controls_row.setSpacing(14)
 
             self.dial.set_compact(True)
-            self.stretch_card.set_compact(True)
             self.btn_play.set_compact(True)
             self.btn_reset.setFixedSize(28, 28)
             self.btn_skip.setFixedSize(28, 28)
@@ -1276,22 +1741,21 @@ class PomodoroWindow(QMainWindow):
             self.controls_row.setSpacing(22)
 
             self.dial.set_compact(False)
-            self.stretch_card.set_compact(False)
             self.btn_play.set_compact(False)
             self.btn_reset.setFixedSize(38, 38)
             self.btn_skip.setFixedSize(38, 38)
 
         self._update_window_geometry()
+        if self.stretch_popup.isVisible():
+            QTimer.singleShot(20, lambda: self.stretch_popup.position_near(self))
 
     def _update_window_geometry(self):
         compact = bool(self.settings.get("compact_mode", False))
-        is_break = self.current_mode in ("short_break", "long_break")
         if compact:
-            # Slightly taller in break mode so the stretch recommendation fits cleanly
-            self.setFixedSize(210, 300 if is_break else 236)
+            self.setFixedSize(210, 236)
         else:
-            self.dial.setMinimumSize(195 if is_break else 230, 195 if is_break else 230)
-            self.setFixedSize(390, 520 if is_break else 500)
+            self.dial.setMinimumSize(230, 230)
+            self.setFixedSize(390, 500)
 
     # -----------------------------------------------------------------------
     # UI Construction
@@ -1445,12 +1909,6 @@ class PomodoroWindow(QMainWindow):
         # Center Circular Progress Dial
         self.dial = CircularTimerDial()
         self.timer_page_layout.addWidget(self.dial, 1)
-
-        # Break Stretching / Exercise Recommendation Card (shown during Short/Long Break)
-        self.stretch_card = StretchTipCard()
-        self.stretch_card.btn_next.clicked.connect(lambda: self._pick_next_exercise(avoid_current=True))
-        self.stretch_card.hide()
-        self.timer_page_layout.addWidget(self.stretch_card)
 
         # Main Transport Controls Row: Reset | Play/Pause | Skip
         self.controls_row = QHBoxLayout()
@@ -2154,8 +2612,10 @@ class PomodoroWindow(QMainWindow):
             candidates = [ex for ex in pool if ex != self.current_exercise]
         self.current_exercise = random.choice(candidates)
         if target_mode in ("short_break", "long_break"):
-            self.stretch_card.set_exercise(
-                self.current_exercise, SESSION_MODES[target_mode]["color"]
+            self.stretch_popup.set_exercise(
+                self.current_exercise,
+                target_mode,
+                SESSION_MODES[target_mode]["color"],
             )
         return self.current_exercise
 
@@ -2169,23 +2629,28 @@ class PomodoroWindow(QMainWindow):
         self.title_dot.setStyleSheet(
             f"background-color: {accent}; border-radius: 4px;"
         )
-        self.btn_pin.set_active(bool(self.settings.get("always_on_top", True)), accent)
+        aot = bool(self.settings.get("always_on_top", True))
+        self.btn_pin.set_active(aot, accent)
         self.btn_compact.set_active(bool(self.settings.get("compact_mode", False)), accent)
-
-        if mode in ("short_break", "long_break"):
-            if self.current_exercise is None or manual:
-                self._pick_next_exercise(mode=mode, avoid_current=True)
-            else:
-                self.stretch_card.set_exercise(self.current_exercise, accent)
-            self.stretch_card.show()
-        else:
-            self.stretch_card.hide()
 
         self._update_window_geometry()
         self._update_pin_badge()
         self._style_mode_tabs()
         self._style_preset_buttons()
         self._update_timer_display(animate=False)
+
+        if mode in ("short_break", "long_break"):
+            if self.current_exercise is None or manual:
+                self._pick_next_exercise(mode=mode, avoid_current=True)
+            else:
+                self.stretch_popup.set_exercise(self.current_exercise, mode, accent)
+            self.stretch_popup.set_always_on_top(aot)
+            self.stretch_popup.position_near(self)
+            self.stretch_popup.show()
+            self.stretch_popup.raise_()
+            QTimer.singleShot(50, self._enforce_x11_above)
+        else:
+            self.stretch_popup.hide()
 
     def skip_session(self):
         self._advance_session(completed_naturally=False)
@@ -2314,6 +2779,11 @@ class PomodoroWindow(QMainWindow):
     def mouseReleaseEvent(self, event):
         self._drag_pos = None
         super().mouseReleaseEvent(event)
+
+    def closeEvent(self, event):
+        if hasattr(self, "stretch_popup") and self.stretch_popup is not None:
+            self.stretch_popup.close()
+        super().closeEvent(event)
 
 
 def create_app_icon() -> QIcon:
