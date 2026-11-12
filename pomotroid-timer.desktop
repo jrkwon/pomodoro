@@ -2,11 +2,15 @@
 Version=1.0
 Type=Application
 Name=Pomodoro
-Comment=Minimalist Always-on-Top Pomodoro Timer for Linux
+GenericName=Pomodoro Timer
+Comment=Minimalist Always-on-Top Pomodoro Timer with Break Stretches
 Exec=/usr/bin/python3 /home/jaerock/projects/pomodoro/pomodoro.py
 Icon=alarm-symbolic
 Terminal=false
 Categories=Utility;Clock;GTK;Qt;
+Keywords=pomodoro;timer;focus;break;clock;뽀모도로;타이머;
 StartupNotify=true
 StartupWMClass=pomodoro.py
-
+X-GNOME-Autostart-enabled=true
+Hidden=false
+NoDisplay=false

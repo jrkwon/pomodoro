@@ -62,9 +62,15 @@ uv run pomodoro.py
 python3 pomodoro.py
 ```
 
-### Linux 애플리케이션 메뉴 등록 (선택 사항)
+### 데스크톱 앱 검색 & 시작 프로그램(Startup Application) 등록
+앱을 처음 실행하거나 아래 명령을 실행하면 **데스크톱 앱 런처(`~/.local/share/applications/pomotroid-timer.desktop`, macOS `~/Applications/Pomodoro.app`)** 및 **로그인 시 자동 시작 프로그램(`~/.config/autostart/pomotroid-timer.desktop`, macOS `LaunchAgents`)**에 자동으로 등록됩니다. 설정(`Ctrl + ,`)의 `Start automatically on login (Startup App)` 체크박스에서 언제든 자동 시작 여부를 켜거나 끌 수 있습니다.
+
 ```bash
-cp pomotroid-timer.desktop ~/.local/share/applications/
+# 창을 띄우지 않고 데스크톱 앱 및 시작 프로그램으로 즉시 등록:
+pomodoro --install
+
+# 데스크톱 앱 및 시작 프로그램 등록 해제:
+pomodoro --uninstall
 ```
 
 ## 단축키 안내

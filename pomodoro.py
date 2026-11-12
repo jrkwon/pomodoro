@@ -27,6 +27,8 @@ import json
 import math
 import os
 import random
+import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -217,6 +219,7 @@ DEFAULT_SETTINGS = {
     "auto_start_work": False,
     "auto_start_break": False,
     "compact_mode": False,
+    "autostart": True,
 }
 
 BREAK_EXERCISES = {
@@ -1614,6 +1617,10 @@ class PomodoroWindow(QMainWindow):
         self._build_ui()
         self._setup_shortcuts()
 
+        # Ensure Desktop Launcher & Startup Application integration
+        install_desktop_integration()
+        sync_autostart(bool(self.settings.get("autostart", True)))
+
         # Core 1-second tick timer
         self.tick_timer = QTimer(self)
         self.tick_timer.setInterval(1000)
@@ -2226,6 +2233,10 @@ class PomodoroWindow(QMainWindow):
         self.chk_always_top.setStyleSheet(chk_style)
         self.chk_always_top.toggled.connect(self._on_chk_always_top)
 
+        self.chk_autostart = QCheckBox("Start automatically on login (Startup App)")
+        self.chk_autostart.setStyleSheet(chk_style)
+        self.chk_autostart.toggled.connect(self._on_chk_autostart)
+
         self.chk_auto_break = QCheckBox("Auto-start Breaks when Focus ends")
         self.chk_auto_break.setStyleSheet(chk_style)
         self.chk_auto_break.toggled.connect(
@@ -2249,6 +2260,7 @@ class PomodoroWindow(QMainWindow):
         self.chk_sound.toggled.connect(self._on_chk_sound)
 
         layout.addWidget(self.chk_always_top)
+        layout.addWidget(self.chk_autostart)
         layout.addWidget(self.chk_auto_break)
         layout.addWidget(self.chk_auto_work)
         layout.addWidget(self.chk_notify)
@@ -2336,6 +2348,10 @@ class PomodoroWindow(QMainWindow):
         self.chk_always_top.blockSignals(True)
         self.chk_always_top.setChecked(aot)
         self.chk_always_top.blockSignals(False)
+
+        self.chk_autostart.blockSignals(True)
+        self.chk_autostart.setChecked(bool(self.settings.get("autostart", True)))
+        self.chk_autostart.blockSignals(False)
 
         self.chk_auto_break.blockSignals(True)
         self.chk_auto_break.setChecked(bool(self.settings.get("auto_start_break", False)))
@@ -2578,6 +2594,11 @@ class PomodoroWindow(QMainWindow):
     def _on_chk_always_top(self, checked: bool):
         if bool(self.settings.get("always_on_top", True)) != checked:
             self.toggle_always_on_top()
+
+    def _on_chk_autostart(self, checked: bool):
+        self.settings["autostart"] = bool(checked)
+        self.save_settings()
+        sync_autostart(bool(checked))
 
     def _on_chk_sound(self, checked: bool):
         self.settings["sound_enabled"] = bool(checked)
@@ -2875,12 +2896,188 @@ def create_app_icon() -> QIcon:
     return icon
 
 
+def get_launch_command() -> str:
+    """Returns the command line to execute Pomodoro for Desktop / Autostart entries."""
+    local_bin = Path.home() / ".local" / "bin" / "pomodoro"
+    if local_bin.exists():
+        return str(local_bin)
+    which_bin = shutil.which("pomodoro")
+    if which_bin:
+        return str(Path(which_bin).resolve())
+    script_path = Path(__file__).resolve()
+    return f"{sys.executable} {script_path}"
+
+
+def build_linux_desktop_entry(autostart: bool = False) -> str:
+    """Generates the XDG .desktop entry content for Linux launcher & autostart."""
+    exec_cmd = get_launch_command()
+    lines = [
+        "[Desktop Entry]",
+        "Version=1.0",
+        "Type=Application",
+        "Name=Pomodoro",
+        "GenericName=Pomodoro Timer",
+        "Comment=Minimalist Always-on-Top Pomodoro Timer with Break Stretches",
+        f"Exec={exec_cmd}",
+        "Icon=alarm-symbolic",
+        "Terminal=false",
+        "Categories=Utility;Clock;GTK;Qt;",
+        "Keywords=pomodoro;timer;focus;break;clock;뽀모도로;타이머;",
+        "StartupNotify=true",
+        "StartupWMClass=pomodoro.py",
+    ]
+    if autostart:
+        lines.extend(
+            [
+                "X-GNOME-Autostart-enabled=true",
+                "Hidden=false",
+                "NoDisplay=false",
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
+def install_desktop_integration() -> bool:
+    """Registers Pomodoro as a searchable Desktop Application across platforms."""
+    try:
+        if sys.platform.startswith("linux"):
+            apps_dir = Path.home() / ".local" / "share" / "applications"
+            apps_dir.mkdir(parents=True, exist_ok=True)
+            desktop_file = apps_dir / "pomotroid-timer.desktop"
+            desktop_file.write_text(build_linux_desktop_entry(autostart=False), encoding="utf-8")
+            desktop_file.chmod(desktop_file.stat().st_mode | stat.S_IXUSR)
+            try:
+                subprocess.Popen(
+                    ["update-desktop-database", str(apps_dir)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:
+                pass
+            return True
+        elif sys.platform == "darwin":
+            app_bundle = Path.home() / "Applications" / "Pomodoro.app" / "Contents"
+            macos_dir = app_bundle / "MacOS"
+            macos_dir.mkdir(parents=True, exist_ok=True)
+            plist_path = app_bundle / "Info.plist"
+            plist_path.write_text(
+                """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Pomodoro</string>
+    <key>CFBundleDisplayName</key>
+    <string>Pomodoro</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.jrkwon.pomodoro</string>
+    <key>CFBundleVersion</key>
+    <string>0.1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>Pomodoro</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+""",
+                encoding="utf-8",
+            )
+            launcher = macos_dir / "Pomodoro"
+            launcher.write_text(f"#!/bin/sh\nexec {get_launch_command()}\n", encoding="utf-8")
+            launcher.chmod(0o755)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def sync_autostart(enabled: bool = True) -> bool:
+    """Registers or removes Pomodoro from OS Startup Applications (Launch on Login)."""
+    try:
+        if sys.platform.startswith("linux"):
+            autostart_dir = Path.home() / ".config" / "autostart"
+            autostart_file = autostart_dir / "pomotroid-timer.desktop"
+            if enabled:
+                autostart_dir.mkdir(parents=True, exist_ok=True)
+                autostart_file.write_text(
+                    build_linux_desktop_entry(autostart=True), encoding="utf-8"
+                )
+                autostart_file.chmod(autostart_file.stat().st_mode | stat.S_IXUSR)
+            else:
+                if autostart_file.exists():
+                    autostart_file.unlink()
+            return True
+        elif sys.platform == "darwin":
+            agents_dir = Path.home() / "Library" / "LaunchAgents"
+            plist_file = agents_dir / "com.jrkwon.pomodoro.plist"
+            if enabled:
+                agents_dir.mkdir(parents=True, exist_ok=True)
+                cmd_parts = get_launch_command().split()
+                args_xml = "\n".join(f"        <string>{p}</string>" for p in cmd_parts)
+                plist_file.write_text(
+                    f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jrkwon.pomodoro</string>
+    <key>ProgramArguments</key>
+    <array>
+{args_xml}
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+""",
+                    encoding="utf-8",
+                )
+            else:
+                if plist_file.exists():
+                    plist_file.unlink()
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def uninstall_desktop_integration():
+    """Removes Desktop Launcher and Startup Application entries."""
+    sync_autostart(False)
+    try:
+        if sys.platform.startswith("linux"):
+            desktop_file = Path.home() / ".local" / "share" / "applications" / "pomotroid-timer.desktop"
+            if desktop_file.exists():
+                desktop_file.unlink()
+        elif sys.platform == "darwin":
+            app_bundle = Path.home() / "Applications" / "Pomodoro.app"
+            if app_bundle.exists():
+                shutil.rmtree(app_bundle, ignore_errors=True)
+    except Exception:
+        pass
+
+
 def main():
+    if "--install-desktop" in sys.argv or "--install" in sys.argv:
+        install_desktop_integration()
+        sync_autostart(True)
+        print("Pomodoro Desktop App & Startup Application registered successfully.")
+        return
+
+    if "--uninstall-desktop" in sys.argv or "--uninstall" in sys.argv:
+        uninstall_desktop_integration()
+        print("Pomodoro Desktop App & Startup Application removed.")
+        return
+
     # Enable High-DPI scaling
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
-    app = QApplication(sys.argv)
+    # Normalize argv[0] to 'pomodoro.py' so X11 WM_CLASS always matches StartupWMClass=pomodoro.py
+    qt_argv = ["pomodoro.py"] + sys.argv[1:]
+    app = QApplication(qt_argv)
     app.setApplicationName("Pomodoro")
     app.setDesktopFileName("pomotroid-timer")
     app_icon = create_app_icon()
